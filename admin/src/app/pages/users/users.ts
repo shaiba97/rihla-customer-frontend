@@ -2,7 +2,7 @@ import { Component, signal, inject, OnInit } from '@angular/core';
 import { NgClass } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { LucideSearch, LucideTrash2, LucideAlertCircle, LucideChevronLeft, LucideChevronRight, LucideUsers, LucideLoaderCircle } from '@lucide/angular';
+import { LucideSearch, LucideTrash2, LucideAlertCircle, LucideChevronLeft, LucideChevronRight, LucideUsers, LucideLoaderCircle, LucidePen, LucideX, LucideUserPlus } from '@lucide/angular';
 import { AdminUsersService } from '../../core/services/admin-users/admin-users.service';
 import { BusesService } from '../../core/services/buses/buses-service';
 import { Trips } from '../../core/services/trips/trips';
@@ -10,7 +10,7 @@ import { Trips } from '../../core/services/trips/trips';
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [NgClass, FormsModule, LucideSearch, LucideTrash2, LucideAlertCircle, LucideChevronLeft, LucideChevronRight, LucideUsers, LucideLoaderCircle],
+  imports: [NgClass, FormsModule, LucideSearch, LucideTrash2, LucideAlertCircle, LucideChevronLeft, LucideChevronRight, LucideUsers, LucideLoaderCircle, LucidePen, LucideX, LucideUserPlus],
   templateUrl: './users.html',
 })
 export class UsersComponent implements OnInit {
@@ -29,6 +29,23 @@ export class UsersComponent implements OnInit {
   error = signal('');
   deleteId = signal<string | null>(null);
   deleteName = signal('');
+
+  showModal = signal(false);
+  editMode = signal(false);
+  editId = signal<string | null>(null);
+  saving = signal(false);
+  formError = signal('');
+  formName = signal('');
+  formEmail = signal('');
+  formPhone = signal('');
+  formPassword = signal('');
+  formRole = signal('USER');
+
+  roles = [
+    { value: 'USER', label: 'مستخدم' },
+    { value: 'ADMIN', label: 'مشرف' },
+    { value: 'COMPANY', label: 'شركة' },
+  ];
 
   ngOnInit() { this.load(); }
 
@@ -81,12 +98,78 @@ export class UsersComponent implements OnInit {
     this.svc.remove(id).subscribe({ next: () => { this.cancelDelete(); this.load(); }, error: () => {} });
   }
 
+  openCreate(): void {
+    this.editMode.set(false);
+    this.editId.set(null);
+    this.formName.set('');
+    this.formEmail.set('');
+    this.formPhone.set('');
+    this.formPassword.set('');
+    this.formRole.set('USER');
+    this.formError.set('');
+    this.showModal.set(true);
+  }
+
+  openEdit(user: any): void {
+    this.editMode.set(true);
+    this.editId.set(user.id);
+    this.formName.set(user.name || '');
+    this.formEmail.set(user.email || '');
+    this.formPhone.set(user.phone || '');
+    this.formPassword.set('');
+    this.formRole.set(user.role || 'USER');
+    this.formError.set('');
+    this.showModal.set(true);
+  }
+
+  closeModal(): void {
+    this.showModal.set(false);
+  }
+
+  saveUser(): void {
+    this.formError.set('');
+    if (!this.formName().trim()) {
+      this.formError.set('الاسم مطلوب');
+      return;
+    }
+    if (!this.editMode() && !this.formPassword().trim()) {
+      this.formError.set('كلمة المرور مطلوبة');
+      return;
+    }
+
+    this.saving.set(true);
+    if (this.editMode()) {
+      const payload: any = { name: this.formName().trim() };
+      if (this.formEmail().trim()) payload.email = this.formEmail().trim();
+      if (this.formPhone().trim()) payload.phone = this.formPhone().trim();
+      if (this.formPassword().trim()) payload.password = this.formPassword().trim();
+      payload.role = this.formRole();
+      this.svc.update(this.editId()!, payload).subscribe({
+        next: () => { this.saving.set(false); this.closeModal(); this.load(); },
+        error: (err: any) => { this.saving.set(false); this.formError.set(err?.error?.message || err?.message || 'فشل التحديث'); },
+      });
+    } else {
+      const payload: any = { name: this.formName().trim(), password: this.formPassword().trim(), role: this.formRole() };
+      if (this.formEmail().trim()) payload.email = this.formEmail().trim();
+      if (this.formPhone().trim()) payload.phone = this.formPhone().trim();
+      this.svc.create(payload).subscribe({
+        next: () => { this.saving.set(false); this.closeModal(); this.load(); },
+        error: (err: any) => { this.saving.set(false); this.formError.set(err?.error?.message || err?.message || 'فشل الإنشاء'); },
+      });
+    }
+  }
+
   roleBadgeClass(role: string): string {
-    return role === 'COMPANY' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700';
+    const map: Record<string, string> = {
+      COMPANY: 'bg-purple-100 text-purple-700',
+      USER: 'bg-blue-100 text-blue-700',
+      ADMIN: 'bg-amber-100 text-amber-700',
+    };
+    return map[role] || 'bg-gray-100 text-gray-700';
   }
 
   roleLabel(r: string): string {
-    return { COMPANY: 'شركة', USER: 'مستخدم' }[r] ?? r;
+    return { COMPANY: 'شركة', USER: 'مستخدم', ADMIN: 'مشرف' }[r] ?? r;
   }
 
   toArabic(n: number): string { return String(n).replace(/[0-9]/g, d => '٠١٢٣٤٥٦٧٨٩'[+d]); }
