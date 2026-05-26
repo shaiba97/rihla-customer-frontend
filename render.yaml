@@ -6,29 +6,39 @@ services:
     branch: main
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
+    healthCheckPath: /api/health
     envVars:
-      # Required
+      # Required — set these manually in Render dashboard
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
         sync: false
-      # Server ports (optional, defaults used if omitted)
+      # Server ports (must match docker-entrypoint.sh)
       - key: ADMIN_PORT
         value: "3000"
       - key: COMPANY_PORT
         value: "3001"
       - key: CUSTOMER_PORT
         value: "3002"
-      # CORS origins (comma-separated)
+      # CORS origins (update with your actual domains)
       - key: CORS_ORIGINS
-        value: https://your-admin-domain.com,https://your-company-domain.com,https://your-customer-domain.com
+        value: https://your-frontend-domain.com
       # Redis
       - key: REDIS_HOST
-        value: redis
+        fromService:
+          name: rihla-redis
+          type: redis
+          property: host
       - key: REDIS_PORT
-        value: "6379"
+        fromService:
+          name: rihla-redis
+          type: redis
+          property: port
       - key: REDIS_PASSWORD
-        sync: false
+        fromService:
+          name: rihla-redis
+          type: redis
+          property: password
       # WhatsApp (optional)
       - key: WHATSAPP_PHONE_NUMBER_ID
         sync: false
@@ -37,3 +47,9 @@ services:
       # Node environment
       - key: NODE_ENV
         value: production
+
+  - type: redis
+    name: rihla-redis
+    plan: free
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
