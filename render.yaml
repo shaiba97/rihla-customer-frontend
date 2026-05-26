@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: rihla-backend
+    runtime: docker
+    repo: https://github.com/your-username/your-repo
+    branch: main
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: JWT_REFRESH_SECRET
+        sync: false
+      - key: JWT_REFRESH_EXPIRES_IN
+        value: 30d
+      - key: PASSPORT_COMPANY_SECURITY_SECRET
+        sync: false
+      - key: PASSPORT_CUSTOMER_SECURITY_SECRET
+        sync: false
+      - key: PASSPORT_ADMIN_SECURITY_SECRET
+        sync: false
+      - key: REDIS_HOST
+        value: redis
+      - key: REDIS_PORT
+        value: "6379"
+      - key: PDF_OUTPUT_DIR
+        value: ./upload
